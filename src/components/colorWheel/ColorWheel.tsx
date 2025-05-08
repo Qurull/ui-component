@@ -1,5 +1,5 @@
 "use client"
-import type { CSSProperties, Dispatch, ReactNode, RefObject, SetStateAction } from "react"
+import type { CSSProperties, Dispatch, PropsWithChildren, RefObject, SetStateAction } from "react"
 import { createContext, useContext, useEffect, useRef, useState } from "react"
 
 import { Point } from "@/lib/helpers/point"
@@ -11,11 +11,7 @@ interface LabelCSSProperties extends CSSProperties {
     "--hue": number;
 }
 
-interface BaseProps {
-    children?: ReactNode;
-}
-
-interface ColorWheelProps extends BaseProps {
+interface ColorWheelProps extends PropsWithChildren {
     defaultValue?: number;
 }
 
@@ -27,6 +23,12 @@ interface ColorWheelContextProps {
 }
 
 const ColorWheelContext = createContext<ColorWheelContextProps | null>(null)
+
+function useColorWheelContext() {
+    const colorWheelContext = useContext(ColorWheelContext)
+    if (!colorWheelContext) throw new Error("Component must be used within ColorWheel")
+    return colorWheelContext
+}
 
 export function ColorWheel({ defaultValue = 0, children }: Readonly<ColorWheelProps>) {
     const containerRef = useRef<HTMLDivElement>(null)
@@ -43,16 +45,15 @@ export function ColorWheel({ defaultValue = 0, children }: Readonly<ColorWheelPr
 }
 
 export function ColorWheelPicker() {
-    const colorWheelContext = useContext(ColorWheelContext)
-    if (!colorWheelContext) throw new Error("ColorWheelPicker must be used within ColorWheel")
-        
-    const { containerRef, pickerRef, value, setValue } = colorWheelContext
+    const { containerRef, pickerRef, value, setValue } = useColorWheelContext()
 
     useEffect(() => {
-        if (!containerRef.current || !pickerRef.current) return
+        const container = containerRef.current
+        const picker = pickerRef.current
+        if (!container || !picker) return
 
-        const containerRect: DOMRect = containerRef.current.getBoundingClientRect()
-        const pickerRect: DOMRect = pickerRef.current.getBoundingClientRect()
+        const containerRect: DOMRect = container.getBoundingClientRect()
+        const pickerRect: DOMRect = picker.getBoundingClientRect()
 
         const pickerCenter: Point = new Point(pickerRect.width/2, pickerRect.height/2)
         const containerCenter: Point = new Point(containerRect.width/2 - pickerCenter.x/2, containerRect.height/2 - pickerCenter.x/2)
@@ -61,8 +62,8 @@ export function ColorWheelPicker() {
 
         const updatePickerPosition = (theta: number) => {
             const direction: Point = new Point(Math.sin(theta), -Math.cos(theta))
-            pickerRef.current!.style.left = `${containerCenter.x + direction.x * DISTANCE}px`
-            pickerRef.current!.style.top = `${containerCenter.y + direction.y * DISTANCE}px`
+            picker.style.left = `${containerCenter.x + direction.x * DISTANCE}px`
+            picker.style.top = `${containerCenter.y + direction.y * DISTANCE}px`
         }
 
         const handleMouseMove = ({ clientX, clientY }: MouseEvent) => {
@@ -84,9 +85,9 @@ export function ColorWheelPicker() {
 
         updatePickerPosition(value * deg2Rad)
         
-        pickerRef.current.addEventListener("mousedown", handleMouseDown)
+        picker.addEventListener("mousedown", handleMouseDown)
 
-        return () => pickerRef.current?.removeEventListener("mousedown", handleMouseDown)
+        return () => picker.removeEventListener("mousedown", handleMouseDown)
     }, [value, setValue])
 
     return (
@@ -95,10 +96,7 @@ export function ColorWheelPicker() {
 }
 
 export function ColorWheelLabel() {
-    const colorWheelContext = useContext(ColorWheelContext)
-    if (!colorWheelContext) throw new Error("ColorWheelLabel must be used within ColorWheel")
-
-    const { value } = colorWheelContext
+    const { value } = useColorWheelContext()
 
     return (
         <p style={{ "--hue": value } as LabelCSSProperties} className={styles.label}>{Math.floor(value)}&deg;</p>

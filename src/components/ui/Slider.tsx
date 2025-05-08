@@ -1,13 +1,9 @@
 "use client"
-import type { ReactNode, Dispatch, SetStateAction, RefObject } from "react"
+import type { Dispatch, SetStateAction, RefObject } from "react"
 import { createContext, useState, useRef, useContext, useCallback, useEffect } from "react"
+import { ComponentProps } from "@/lib/interfaces/componentProps"
 
-interface BaseProps {
-    className?: string;
-    children?: ReactNode;
-}
-
-interface SliderContainerProps extends BaseProps {
+interface SliderContainerProps extends ComponentProps.WithAll {
     defaultValue: number;
     min: number;
     max: number;
@@ -15,7 +11,7 @@ interface SliderContainerProps extends BaseProps {
     onChange?: Dispatch<number>;
 }
 
-interface SliderContextProps {
+interface SliderContext {
     width: number;
     value: number;
     setValue: Dispatch<SetStateAction<number>>;
@@ -23,15 +19,21 @@ interface SliderContextProps {
     thumbRef: RefObject<HTMLButtonElement | null>;
 }
 
-const SliderContext = createContext<SliderContextProps | null>(null)
+const SliderContext = createContext<SliderContext | null>(null)
 
-export function SliderContainer({ className, defaultValue, max, width, onChange, children }: Readonly<SliderContainerProps>) {
+function useSliderContext() {
+    const sliderContext = useContext(SliderContext)
+    if (!sliderContext) throw new Error("Component must be used within SliderContainer")
+    return sliderContext
+}
+
+export function SliderContainer({ className, defaultValue, max, width, onChange = () => {}, children }: Readonly<SliderContainerProps>) {
     const [value, setValue] = useState(() => defaultValue/max * width)
     const contentRef = useRef<HTMLDivElement>(null)
     const thumbRef = useRef<HTMLButtonElement>(null)
 
     useEffect(() => {
-        onChange && onChange(value)
+        onChange(value)
     }, [value, onChange])
 
     return (
@@ -43,33 +45,32 @@ export function SliderContainer({ className, defaultValue, max, width, onChange,
     )
 }
 
-export function SliderLabel({ className, children }: Readonly<BaseProps>) {
+export function SliderLabel({ className, children }: Readonly<ComponentProps.WithAll>) {
     return (
         <p className={className}>{children}</p>
     )
 }
 
-export function SliderBar({ className, children }: Readonly<BaseProps>) {
-    const sliderContext = useContext(SliderContext)
-    if (!sliderContext) throw new Error("SliderContent must be used within SliderContainer")
+export function SliderBar({ className, children }: Readonly<ComponentProps.WithAll>) {
+    const { contentRef, width } = useSliderContext()
 
     return (
-        <div ref={sliderContext.contentRef} style={{ width: sliderContext.width }} className={`relative flex bg-slate-100 h-2 rounded-full ${className}`}>
+        <div ref={contentRef} style={{ width }} className={`relative flex bg-slate-100 h-2 rounded-full ${className}`}>
             {children}
         </div>
     )
 }
 
-export function SliderThumb({ className }: Readonly<BaseProps>) {
-    const sliderContext = useContext(SliderContext)
-    if (!sliderContext) throw new Error("SliderThumb must be used within SliderContainer")
-
-    const { width, value, setValue, contentRef, thumbRef } = sliderContext
+export function SliderThumb({ className }: Readonly<ComponentProps.WithClassName>) {
+    const { width, value, setValue, contentRef, thumbRef } = useSliderContext()
 
     const handleMouseMove = useCallback(({ clientX }: MouseEvent) => {
-        if (!contentRef.current) return
-        const contentBoundingBox: DOMRect = contentRef.current.getBoundingClientRect()
-        setValue(Math.max(Math.min(clientX - contentBoundingBox.left, width), 0))
+        const content = contentRef.current
+        if (!content) return
+
+        const contentTransform: DOMRect = content.getBoundingClientRect()
+
+        setValue(Math.max(Math.min(clientX - contentTransform.left, width), 0))
     }, [width, setValue])
     
     const handleMouseDown = useCallback(() => {
@@ -87,26 +88,24 @@ export function SliderThumb({ className }: Readonly<BaseProps>) {
             ref={thumbRef} 
             type="button"
             onMouseDown={handleMouseDown}
-            style={{ left: value }}
             className={`absolute -translate-x-1/2 top-1/2 -translate-y-1/2 bg-white border border-blue-500 size-4 rounded-full shadow-lg ${className}`}
+            style={{ left: value }}
         />
     )
 }
 
-export function SliderTrack({ className }: Readonly<BaseProps>) {
-    const sliderContext = useContext(SliderContext)
-    if (!sliderContext) throw new Error("SliderTrack must be used within SliderContainer")
+export function SliderTrack({ className }: Readonly<ComponentProps.WithClassName>) {
+    const { value } = useSliderContext()
 
     return (
-        <div style={{ width: sliderContext.value }} className={`bg-blue-500 rounded-full ${className}`}/>
+        <div style={{ width: value }} className={`bg-blue-500 rounded-full ${className}`}/>
     )
 }
 
-export function SliderValueLabel({ className }: Readonly<BaseProps>) {
-    const sliderContext = useContext(SliderContext)
-    if (!sliderContext) throw new Error("SliderValueLabel must be used within SliderContainer");
+export function SliderValueLabel({ className }: Readonly<ComponentProps.WithClassName>) {
+    const { value, width } = useSliderContext()
 
     return (
-        <p className={`${className}`}>{Math.round(sliderContext.value/sliderContext.width * 100)}%</p>
+        <p className={`${className}`}>{Math.round(value/width * 100)}%</p>
     )
 }

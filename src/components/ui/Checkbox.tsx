@@ -1,14 +1,10 @@
 "use client"
-import type { ReactNode, Dispatch } from "react"
+import type { Dispatch } from "react"
 import { useCallback, useState } from "react"
 import { FaCheck } from "react-icons/fa6"
+import { ComponentProps } from "@/lib/interfaces/componentProps"
 
-interface BaseProps {
-    className?: string;
-    children?: ReactNode;
-}
-
-interface CheckboxProps extends BaseProps {
+interface CheckboxProps extends ComponentProps.WithAll {
     enable?: boolean;
     onChange?: Dispatch<boolean>;
 }

@@ -1,29 +1,31 @@
 "use client"
-import type { ReactNode, Dispatch, SetStateAction } from "react"
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import type { Dispatch, SetStateAction, MouseEventHandler } from "react"
+import { createContext, useCallback, useContext, useEffect, useState } from "react"
+import { ComponentProps } from "@/lib/interfaces/componentProps"
 
-interface BaseProps {
-    className?: string;
-    children?: ReactNode;
-}
-
-interface ToggleContainerProps extends BaseProps {
+interface ToggleContainerProps extends ComponentProps.WithAll {
     enable?: boolean;
     onChange?: Dispatch<boolean>;
 }
 
-interface ToggleContextProps {
+interface ToggleContext {
     isEnabled: boolean;
     setIsEnabled: Dispatch<SetStateAction<boolean>>;
 }
 
-const ToggleContext = createContext<ToggleContextProps | null>(null)
+const ToggleContext = createContext<ToggleContext | null>(null)
 
-export function ToggleContainer({ className, enable = false, onChange, children }: Readonly<ToggleContainerProps>) {
+function useToggleContext() {
+    const toggleContext = useContext(ToggleContext)
+    if (!toggleContext) throw new Error("Component must be used within ToggleContainer")
+    return toggleContext
+}
+
+export function ToggleContainer({ className, enable = false, onChange = () => {}, children }: Readonly<ToggleContainerProps>) {
     const [isEnabled, setIsEnabled] = useState(enable)
 
     useEffect(() => {
-        onChange && onChange(isEnabled)
+        onChange(isEnabled)
     }, [isEnabled, onChange])
 
     return (
@@ -35,30 +37,26 @@ export function ToggleContainer({ className, enable = false, onChange, children 
     )
 }
 
-export function ToggleLabel({ className, children }: Readonly<BaseProps>) {
+export function ToggleLabel({ className, children }: Readonly<ComponentProps.WithAll>) {
     return (
         <p className={`flex items-center gap-x-2 ${className}`}>{children}</p>
     )
 }
 
-export function ToggleContent({ className, children }: Readonly<BaseProps>) {
-    const toggleContext = useContext(ToggleContext)
-    if (!toggleContext) throw new Error("ToggleContent must be used within ToggleContainer")
+export function ToggleContent({ className, children }: Readonly<ComponentProps.WithAll>) {
+    const { isEnabled } = useToggleContext()
 
     return (
-        <section className={`flex ${toggleContext.isEnabled ? "bg-lime-500 justify-end" : "bg-red-500 justify-start"} ml-auto p-0.5 w-9 h-5 rounded-full ${className}`}>
+        <section className={`flex ${isEnabled ? "bg-lime-500 justify-end" : "bg-red-500 justify-start"} ml-auto p-0.5 w-9 h-5 rounded-full ${className}`}>
             {children}
         </section>
     )
 }
 
-export function ToggleButton({ className }: Readonly<BaseProps>) {
-    const toggleContext = useContext(ToggleContext)
-    if (!toggleContext) throw new Error("ToggleButton must be used within ToggleContainer")
+export function ToggleButton({ className }: Readonly<ComponentProps.WithClassName>) {
+    const { setIsEnabled } = useToggleContext()
 
-    const { setIsEnabled } = toggleContext
-
-    const handleClick = useCallback(() => {
+    const handleClick: MouseEventHandler<HTMLButtonElement> = useCallback(() => {
         setIsEnabled(prevState => !prevState)
     }, [setIsEnabled])
     

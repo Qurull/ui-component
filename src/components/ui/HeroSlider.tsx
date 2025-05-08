@@ -1,41 +1,46 @@
 "use client"
-import type { ReactNode, RefObject, Dispatch, SetStateAction } from "react"
+import type { RefObject, Dispatch, SetStateAction, MouseEventHandler } from "react"
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
+import { ComponentProps } from "@/lib/interfaces/componentProps"
 
 export enum SliderDirection {
     PREVIOUS = "Previous",
     NEXT = "Next"
 }
 
-interface BaseProps {
-    className?: string;
-    children?: ReactNode;
-}
-
-interface HeroSliderProps extends BaseProps {
+interface HeroSliderProps extends ComponentProps.WithAll {
     starterIndex?: number;
 }
 
-interface HeroSliderButtonProps extends BaseProps {
+interface HeroSliderButtonProps extends ComponentProps.WithAll {
     direction: SliderDirection;
 }
 
-interface HeroContextProps {
+interface HeroSliderContext {
     sliderIndex: number;
     setSliderIndex: Dispatch<SetStateAction<number>>;
     contentRef: RefObject<HTMLOListElement | null>;
 }
 
-const HeroSliderContext = createContext<HeroContextProps | null>(null)
+const HeroSliderContext = createContext<HeroSliderContext | null>(null)
 
-export function HeroSlider({ className, starterIndex = 0, children }: Readonly<HeroSliderProps>) {
-    const [sliderIndex, setSliderIndex] = useState(starterIndex)
+function useHeroSliderContext() {
+    const heroSliderContext = useContext(HeroSliderContext)
+    if (!heroSliderContext) throw new Error("Component must be used within HeroSlider")
+    return heroSliderContext
+}
+
+export function HeroSlider({ className, children, starterIndex = 0 }: Readonly<HeroSliderProps>) {
+    const [sliderIndex, setSliderIndex] = useState<number>(starterIndex)
     const contentRef = useRef<HTMLOListElement>(null)
 
     useEffect(() => {
-        if (!contentRef.current) return
-        const sliderItems: HTMLCollection = contentRef.current.children
-        const sliderItem = sliderItems.item(sliderIndex) as HTMLLIElement | undefined
+        const content = contentRef.current
+        if (!content) return
+
+        const sliderItems = content.children
+        const sliderItem = sliderItems.item(sliderIndex)
+
         sliderItem?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" })
     }, [sliderIndex])
 
@@ -48,18 +53,17 @@ export function HeroSlider({ className, starterIndex = 0, children }: Readonly<H
     )
 }
 
-export function HeroSliderContent({ children }: Readonly<BaseProps>) {
-    const heroSliderContext = useContext(HeroSliderContext)
-    if (!heroSliderContext) throw new Error("HeroSliderContent must be used within HeroSlider")
+export function HeroSliderContent({ children }: Readonly<ComponentProps.WithChildren>) {
+    const { contentRef } = useHeroSliderContext()
 
     return (
-        <ol ref={heroSliderContext.contentRef} className="grid grid-flow-col auto-cols-[100%] auto-rows-[12rem] overflow-x-hidden">
+        <ol ref={contentRef} className="grid grid-flow-col auto-cols-[100%] auto-rows-[12rem] overflow-x-hidden">
             {children}
         </ol>
     )
 }
 
-export function HeroSliderItem({ className, children }: Readonly<BaseProps>) {
+export function HeroSliderItem({ className, children }: Readonly<ComponentProps.WithAll>) {
     return (
         <li className={className}>
             {children}
@@ -68,14 +72,14 @@ export function HeroSliderItem({ className, children }: Readonly<BaseProps>) {
 }
 
 export function HeroSliderButton({ direction, children }: Readonly<HeroSliderButtonProps>) {
-    const heroSliderContext = useContext(HeroSliderContext)
-    if (!heroSliderContext) throw new Error("HeroSliderButton must be used within HeroSlider")
+    const { setSliderIndex, contentRef } = useHeroSliderContext()
 
-    const { setSliderIndex, contentRef } = heroSliderContext
+    const handleClick: MouseEventHandler<HTMLButtonElement> = useCallback(() => {
+        const content = contentRef.current
+        if (!content) return
 
-    const handleClick = useCallback(() => {
-        if (!contentRef.current) return
-        const childrenCount: number = contentRef.current.children.length
+        const childrenCount = content.children.length
+
         setSliderIndex(prevState => (
             (direction === SliderDirection.NEXT ? (prevState + 1) : (prevState - 1 + childrenCount)) % childrenCount
         ))
@@ -92,12 +96,9 @@ export function HeroSliderButton({ direction, children }: Readonly<HeroSliderBut
 }
 
 export function HeroSliderControls() {
-    const heroSliderContext = useContext(HeroSliderContext)
-    if (!heroSliderContext) throw new Error("HeroSliderControls must be used within HeroSlider")
+    const { sliderIndex, setSliderIndex, contentRef } = useHeroSliderContext()
 
-    const { sliderIndex, setSliderIndex, contentRef } = heroSliderContext
-
-    const handleClick = useCallback((index: number) => setSliderIndex(index), [setSliderIndex])
+    const handleClick: Dispatch<number> = useCallback(index => setSliderIndex(index), [setSliderIndex])
 
     return (
         <ol className="absolute flex gap-x-2 mx-auto inset-x-0 bottom-2 w-fit">

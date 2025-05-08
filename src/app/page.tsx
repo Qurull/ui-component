@@ -81,7 +81,7 @@ export default function Home() {
                         </DropdownButton>
                         <DropdownList>
                             <DropdownItem className="items-center gap-2" rowable>
-                            <DropdownLink href="/settings/appearance">Appearance</DropdownLink>
+                                <DropdownLink href="/settings/appearance">Appearance</DropdownLink>
                             </DropdownItem>
                             <DropdownItem className="items-center gap-2" rowable>
                                 <DropdownLink href="/settings/privacy">Privacy</DropdownLink>
